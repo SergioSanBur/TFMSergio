@@ -1,0 +1,75 @@
+networks:
+  net:
+    external: false
+
+services:
+  db:
+    container_name: "rescuer-mongo"
+    image: mongo:4
+    restart: always
+    volumes: 
+      - ./mongo-data:/data/db
+    ports:
+      - "27018:27017"
+    networks:
+      - net
+  web:
+    container_name: "rescuer-flask"
+    image: gatvdocker/rescuer-flask:pc
+    restart: always
+    ports:
+      - "8000:5000"
+    depends_on:
+      - db
+    networks:
+      - net
+  logger:
+    container_name: "rescuer-logger"
+    image: gatvdocker/rescuer-logger:pc
+    restart: always
+    depends_on:
+      - mqtt
+    networks:
+      - net
+  mqtt:
+    container_name: "rescuer-mqtt"
+    image: nanomq/nanomq:0.6.6
+    restart: always
+    ports:
+      - "1884:1883"
+    networks:
+      - net
+  pupil:
+    container_name: "pupil"
+    image: pupil:pc
+    restart: always
+    privileged: true
+    depends_on:
+      - db
+    networks:
+      - net
+    environment:
+      - MONGODB_URI=${MONGODB_URI}
+      - LOCAL_IP=${LOCAL_IP}
+      - UDEV=1
+    devices:
+      - "/dev/bus/usb:/dev/bus/usb"
+    volumes:
+      - /etc/udev/rules.d:/etc/udev/rules.d
+      - /lib/udev:/lib/udev
+      - /dev:/dev
+  cognitive-load:
+    container_name: "rescuer-clb"
+    image: gatvdocker/rescuer-clb:pc
+    restart: always
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_GAME_HOST=${DB_GAME_HOST}
+      - EYE_GAZE=${EYE_GAZE}
+      - GAME=${GAME}
+      - BIO=${BIO}
+    networks:
+      - net
+
+
+    
